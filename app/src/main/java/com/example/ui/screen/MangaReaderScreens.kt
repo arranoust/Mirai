@@ -163,7 +163,7 @@ fun HomeScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp)
+                contentPadding = PaddingValues(bottom = 0.dp)
             ) {
                 if (kcEnabled) {
                     item {
@@ -384,7 +384,7 @@ fun ActiveSearchResults(searchState: UiState<List<Manga>>, navController: NavCon
 
 @Composable
 fun VerticalMangaGrid(mangas: List<Manga>, navController: NavController, modifier: Modifier = Modifier) {
-    GridCellsAdaptive(items = mangas, columns = 3, modifier = modifier.padding(bottom = 80.dp)) { manga ->
+    GridCellsAdaptive(items = mangas, columns = 3, modifier = modifier.padding(bottom = 0.dp)) { manga ->
         MangaGridCard(manga = manga, navController = navController, modifier = Modifier.padding(4.dp))
     }
 }
@@ -416,17 +416,17 @@ fun <T> GridCellsAdaptive(items: List<T>, columns: Int, modifier: Modifier = Mod
 fun LibraryScreen(viewModel: MangaViewModel, navController: NavController) {
     val savedMangaList by viewModel.savedMangaList.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Library", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
-        }
-    ) { paddingValues ->
+    Column(modifier = Modifier.fillMaxSize()) {
+        
+        TopAppBar(
+            windowInsets = WindowInsets(0, 0, 0, 0), 
+            title = { Text("Library", fontWeight = FontWeight.Bold) },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+        )
+
         if (savedMangaList.isEmpty()) {
             Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                modifier = Modifier.fillMaxSize(), 
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
@@ -460,7 +460,9 @@ fun LibraryScreen(viewModel: MangaViewModel, navController: NavController) {
                     description = it.description, genres = it.genres
                 )
             }
-            GridCellsAdaptive(items = normalMangas, columns = 3, modifier = Modifier.padding(paddingValues)) { manga ->
+
+            GridCellsAdaptive(items = normalMangas, columns = 3, modifier = Modifier.fillMaxSize().padding(bottom = 0.dp) 
+            ) { manga ->
                 MangaGridCard(manga = manga, navController = navController, modifier = Modifier.padding(4.dp))
             }
         }
@@ -518,8 +520,10 @@ fun MangaDetailScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0), 
                 title = {
                     Text(
                         detailManga?.title ?: "Manga Detail",
@@ -533,7 +537,6 @@ fun MangaDetailScreen(
                     }
                 },
                 actions = {
-                    // Sekarang cukup panggil ViewModel — tidak perlu scope/coroutine di sini
                     IconButton(
                         onClick = {
                             val manga = detailManga
@@ -553,12 +556,20 @@ fun MangaDetailScreen(
         }
     ) { paddingValues ->
         if (loading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues), 
+                contentAlignment = Alignment.Center
+            ) {
                 CircularProgressIndicator()
             }
         } else if (error != null) {
             Box(
-                modifier = Modifier.fillMaxSize().padding(32.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(text = "Error: $error", color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
@@ -569,7 +580,7 @@ fun MangaDetailScreen(
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentPadding = PaddingValues(bottom = 32.dp)
+                contentPadding = PaddingValues(bottom = 0.dp)
             ) {
                 item {
                     Row(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
@@ -776,6 +787,7 @@ fun MangaReaderScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0), // FIX: Mencegah gap di atas TopAppBar karena nested padding MainActivity
                 title = {
                     Column {
                         Text(mangaTitle, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -801,6 +813,7 @@ fun MangaReaderScreen(
         },
         bottomBar = {
             BottomAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0), // FIX: Mencegah gap tambahan di bawah BottomAppBar internal karena bentrokan insets
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentPadding = PaddingValues(horizontal = 8.dp)
             ) {
@@ -934,8 +947,11 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
     val cacheBytes by viewModel.settingsManager.cacheBytesUsed.collectAsStateWithLifecycle()
 
     Scaffold(
+        // FIX 1: Matikan insets bawaan agar tidak membuat gap kosong di atas bottom bar
+        contentWindowInsets = WindowInsets(0, 0, 0, 0), 
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0), 
                 title = { Text("Settings", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
@@ -948,9 +964,13 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                // FIX 2: Hanya ambil top padding dari Scaffold (untuk TopAppBar) agar bagian bottom mentok 0.dp
+                .padding(
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = 0.dp 
+                )
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp) 
         ) {
             SettingsHeader(title = "Display & Styling")
 
