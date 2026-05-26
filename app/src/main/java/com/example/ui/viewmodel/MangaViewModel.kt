@@ -22,7 +22,7 @@ sealed interface UiState<out T> {
 class MangaViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getDatabase(application)
-    val repository = MangaRepository(database.savedMangaDao())
+    private val repository = MangaRepository(database.savedMangaDao()) // ← sekarang private
     val settingsManager = SettingsManager(application)
 
     // HOME STATES
@@ -39,8 +39,39 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    private val _searchResult = MutableStateFlow<UiState<List<Manga>>>(UiState.Idle)
-    val searchResult: StateFlow<UiState<List<Manga>>> = _searchResult
+    val searchResult: StateFlow<UiState<List<Manga>>> = _searchQuery
+        .debounce { query -> if (query.isBlank()) 0L else 400L }
+        .flatMapLatest { query ->
+            if (query.isBlank()) {
+                flow { emit(UiState.Idle) }
+            } else {
+                flow {
+                    emit(UiState.Loading)
+                    val combinedList = mutableListOf<Manga>()
+                    val kcEnabled = settingsManager.komikCastEnabled.value
+                    val sgEnabled = settingsManager.shinigamiEnabled.value
+                    if (kcEnabled) {
+                        try {
+                            combinedList.addAll(repository.search("KomikCast", query, 1))
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                    if (sgEnabled) {
+                        try {
+                            combinedList.addAll(repository.search("Shinigami", query, 1))
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                    emit(
+                        if (combinedList.isNotEmpty()) UiState.Success(combinedList)
+                        else UiState.Error("No matching manga found.")
+                    )
+                }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Idle)
 
     // DETAIL STATES
     private val _detailManga = MutableStateFlow<Manga?>(null)
@@ -61,6 +92,16 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _readerCurrentChapter = MutableStateFlow<Chapter?>(null)
     val readerCurrentChapter: StateFlow<Chapter?> = _readerCurrentChapter
+
+    // LIBRARY ACTION STATES
+    private val _libraryActionResult = MutableStateFlow<LibraryAction?>(null)
+    val libraryActionResult: StateFlow<LibraryAction?> = _libraryActionResult
+
+    sealed class LibraryAction {
+        object Saved : LibraryAction()
+        object Removed : LibraryAction()
+        data class Error(val message: String) : LibraryAction()
+    }
 
     init {
         loadHomeData()
@@ -93,52 +134,15 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
-        if (query.isBlank()) {
-            _searchResult.value = UiState.Idle
-            return
-        }
-
-        viewModelScope.launch {
-            _searchResult.value = UiState.Loading
-            val combinedList = mutableListOf<Manga>()
-
-            // Query enabled sources in parallel
-            val kcEnabled = settingsManager.komikCastEnabled.value
-            val sgEnabled = settingsManager.shinigamiEnabled.value
-
-            if (kcEnabled) {
-                try {
-                    val list = repository.search("KomikCast", query, 1)
-                    combinedList.addAll(list)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-            if (sgEnabled) {
-                try {
-                    val list = repository.search("Shinigami", query, 1)
-                    combinedList.addAll(list)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-
-            if (combinedList.isNotEmpty()) {
-                _searchResult.value = UiState.Success(combinedList)
-            } else {
-                _searchResult.value = UiState.Error("No matching manga found.")
-            }
-        }
     }
 
     fun loadMangaDetail(source: String, slug: String, fallbackManga: Manga?) {
         viewModelScope.launch {
             _detailLoading.value = true
             _detailError.value = null
-            _detailManga.value = fallbackManga // Start with fallback title/thumbnail
+            _detailManga.value = fallbackManga
 
             try {
-                // Fetch details
                 val info = repository.getMangaDetails(source, slug)
                 val fullManga = if (fallbackManga != null) {
                     info.copy(title = fallbackManga.title, thumbnailUrl = fallbackManga.thumbnailUrl)
@@ -147,7 +151,6 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 _detailManga.value = fullManga
 
-                // Fetch chapters
                 val chapters = repository.getChapters(source, slug)
                 _detailChapters.value = chapters
                 _detailLoading.value = false
@@ -158,6 +161,27 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun toggleMangaSaved(manga: Manga, isSaved: Boolean, slug: String) {
+        viewModelScope.launch {
+            try {
+                if (isSaved) {
+                    repository.removeManga(manga.id)
+                    _libraryActionResult.value = LibraryAction.Removed
+                } else {
+                    val title = manga.title.takeIf { it.isNotBlank() } ?: titleFromSlug(slug)
+                    repository.saveManga(manga.copy(title = title))
+                    _libraryActionResult.value = LibraryAction.Saved
+                }
+            } catch (e: Exception) {
+                _libraryActionResult.value = LibraryAction.Error(e.message ?: "Unknown error")
+            }
+        }
+    }
+
+    fun onLibraryActionHandled() {
+        _libraryActionResult.value = null
+    }
+
     fun loadChapterPages(source: String, slug: String, chapter: Chapter) {
         viewModelScope.launch {
             _readerPages.value = UiState.Loading
@@ -166,9 +190,7 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
                 val pages = repository.getChapterPages(source, slug, chapter.id)
                 if (pages.isNotEmpty()) {
                     _readerPages.value = UiState.Success(pages)
-                    // Mark progress in Room db
                     repository.updateLastReadChapter("$source:$slug", chapter.id, chapter.name)
-                    // Increase cache measurement slightly
                     settingsManager.simulateCacheIncrease()
                 } else {
                     _readerPages.value = UiState.Error("No pages found inside this chapter.")
@@ -178,4 +200,10 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+}
+
+fun titleFromSlug(slug: String): String {
+    return slug.replace("-", " ").replace("_", " ")
+        .split(" ")
+        .joinToString(" ") { word -> word.lowercase().replaceFirstChar { it.uppercase() } }
 }

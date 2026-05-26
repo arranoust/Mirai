@@ -42,6 +42,7 @@ import com.example.data.model.Manga
 import com.example.data.model.SavedManga
 import com.example.ui.viewmodel.MangaViewModel
 import com.example.ui.viewmodel.UiState
+import com.example.ui.viewmodel.titleFromSlug
 
 // List of seed colors for our picker
 val ThemeSeedColors = listOf(
@@ -77,7 +78,6 @@ fun HomeScreen(
             .fillMaxSize()
             .padding(top = 12.dp)
     ) {
-        // Rounded Search Bar with 3-dots popup trigger
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -155,40 +155,28 @@ fun HomeScreen(
             }
         }
 
-        // Content
         if (searchQuery.isNotBlank()) {
             ActiveSearchResults(
                 searchState = searchState,
                 navController = navController
             )
         } else {
-            // Standard Home Grid Rows
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                // KomikCast Lane
                 if (kcEnabled) {
                     item {
-                        SourceLaneHeader(title = "KomikCast") {
-                            // Can click row header to view popular specifically
-                        }
-                        SourceMangaLane(
-                            sourceState = kcPopular,
-                            navController = navController
-                        )
+                        SourceLaneHeader(title = "KomikCast") {}
+                        SourceMangaLane(sourceState = kcPopular, navController = navController)
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
 
-                // Shinigami Lane
                 if (sgEnabled) {
                     item {
                         SourceLaneHeader(title = "Shinigami") {}
-                        SourceMangaLane(
-                            sourceState = sgPopular,
-                            navController = navController
-                        )
+                        SourceMangaLane(sourceState = sgPopular, navController = navController)
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
@@ -227,10 +215,7 @@ fun HomeScreen(
 }
 
 @Composable
-fun SourceLaneHeader(
-    title: String,
-    onClick: () -> Unit
-) {
+fun SourceLaneHeader(title: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -263,16 +248,11 @@ fun SourceLaneHeader(
 }
 
 @Composable
-fun SourceMangaLane(
-    sourceState: UiState<List<Manga>>,
-    navController: NavController
-) {
+fun SourceMangaLane(sourceState: UiState<List<Manga>>, navController: NavController) {
     when (sourceState) {
         is UiState.Loading -> {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
+                modifier = Modifier.fillMaxWidth().height(200.dp),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(strokeWidth = 3.dp)
@@ -280,10 +260,7 @@ fun SourceMangaLane(
         }
         is UiState.Error -> {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxWidth().height(200.dp).padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -309,19 +286,11 @@ fun SourceMangaLane(
 }
 
 @Composable
-fun MangaGridCard(
-    manga: Manga,
-    navController: NavController,
-    modifier: Modifier = Modifier
-) {
+fun MangaGridCard(manga: Manga, navController: NavController, modifier: Modifier = Modifier) {
     Card(
-        onClick = {
-            navController.navigate("detail/${manga.source}/${manga.slug}")
-        },
-        modifier = modifier
-            .width(125.dp)
-            .testTag("manga_card_${manga.slug}"),
-        shape = RoundedCornerShape(16.dp), // Extra-rounded 2xl shape
+        onClick = { navController.navigate("detail/${manga.source}/${manga.slug}") },
+        modifier = modifier.width(125.dp).testTag("manga_card_${manga.slug}"),
+        shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
@@ -329,7 +298,7 @@ fun MangaGridCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(3f / 4f) // Precise 3:4 manga aspect ratio from HTML
+                    .aspectRatio(3f / 4f)
                     .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
@@ -339,7 +308,6 @@ fun MangaGridCard(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
-                // Black soft transparent gradient overlay at the bottom half
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -350,7 +318,6 @@ fun MangaGridCard(
                             )
                         )
                 )
-                // Source badge / bottom label
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
@@ -380,10 +347,7 @@ fun MangaGridCard(
 }
 
 @Composable
-fun ActiveSearchResults(
-    searchState: UiState<List<Manga>>,
-    navController: NavController
-) {
+fun ActiveSearchResults(searchState: UiState<List<Manga>>, navController: NavController) {
     when (searchState) {
         is UiState.Loading -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -392,9 +356,7 @@ fun ActiveSearchResults(
         }
         is UiState.Error -> {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
+                modifier = Modifier.fillMaxSize().padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -421,32 +383,14 @@ fun ActiveSearchResults(
 }
 
 @Composable
-fun VerticalMangaGrid(
-    mangas: List<Manga>,
-    navController: NavController,
-    modifier: Modifier = Modifier
-) {
-    GridCellsAdaptive(
-        items = mangas,
-        columns = 3,
-        modifier = modifier.padding(bottom = 80.dp)
-    ) { manga ->
-        MangaGridCard(
-            manga = manga,
-            navController = navController,
-            modifier = Modifier.padding(4.dp)
-        )
+fun VerticalMangaGrid(mangas: List<Manga>, navController: NavController, modifier: Modifier = Modifier) {
+    GridCellsAdaptive(items = mangas, columns = 3, modifier = modifier.padding(bottom = 80.dp)) { manga ->
+        MangaGridCard(manga = manga, navController = navController, modifier = Modifier.padding(4.dp))
     }
 }
 
-// Custom Grid cell generator since we want dynamic columns and high speed
 @Composable
-fun <T> GridCellsAdaptive(
-    items: List<T>,
-    columns: Int,
-    modifier: Modifier = Modifier,
-    content: @Composable (T) -> Unit
-) {
+fun <T> GridCellsAdaptive(items: List<T>, columns: Int, modifier: Modifier = Modifier, content: @Composable (T) -> Unit) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
@@ -455,17 +399,10 @@ fun <T> GridCellsAdaptive(
         items(rows) { rowItems ->
             Row(modifier = Modifier.fillMaxWidth()) {
                 rowItems.forEach { item ->
-                    Box(modifier = Modifier.weight(1f)) {
-                        content(item)
-                    }
+                    Box(modifier = Modifier.weight(1f)) { content(item) }
                 }
-                // Fill empty column weights
                 val remainder = columns - rowItems.size
-                if (remainder > 0) {
-                    repeat(remainder) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-                }
+                if (remainder > 0) repeat(remainder) { Spacer(modifier = Modifier.weight(1f)) }
             }
         }
     }
@@ -476,10 +413,7 @@ fun <T> GridCellsAdaptive(
 // -------------------------------------------------------------------------------------------------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LibraryScreen(
-    viewModel: MangaViewModel,
-    navController: NavController
-) {
+fun LibraryScreen(viewModel: MangaViewModel, navController: NavController) {
     val savedMangaList by viewModel.savedMangaList.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -492,15 +426,10 @@ fun LibraryScreen(
     ) { paddingValues ->
         if (savedMangaList.isEmpty()) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(32.dp)
-                ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
                     Icon(
                         imageVector = Icons.Outlined.Book,
                         contentDescription = "Empty library icon",
@@ -526,27 +455,13 @@ fun LibraryScreen(
         } else {
             val normalMangas = savedMangaList.map {
                 Manga(
-                    id = it.id,
-                    slug = it.slug,
-                    source = it.source,
-                    title = it.title,
-                    thumbnailUrl = it.thumbnailUrl,
-                    author = it.author,
-                    status = it.status,
-                    description = it.description,
-                    genres = it.genres
+                    id = it.id, slug = it.slug, source = it.source, title = it.title,
+                    thumbnailUrl = it.thumbnailUrl, author = it.author, status = it.status,
+                    description = it.description, genres = it.genres
                 )
             }
-            GridCellsAdaptive(
-                items = normalMangas,
-                columns = 3,
-                modifier = Modifier.padding(paddingValues)
-            ) { manga ->
-                MangaGridCard(
-                    manga = manga,
-                    navController = navController,
-                    modifier = Modifier.padding(4.dp)
-                )
+            GridCellsAdaptive(items = normalMangas, columns = 3, modifier = Modifier.padding(paddingValues)) { manga ->
+                MangaGridCard(manga = manga, navController = navController, modifier = Modifier.padding(4.dp))
             }
         }
     }
@@ -564,7 +479,6 @@ fun MangaDetailScreen(
     navController: NavController
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var isMangaSaved by remember { mutableStateOf(false) }
 
     LaunchedEffect(source, slug) {
@@ -576,36 +490,55 @@ fun MangaDetailScreen(
     val loading by viewModel.detailLoading.collectAsStateWithLifecycle()
     val error by viewModel.detailError.collectAsStateWithLifecycle()
 
-    // Observe Saved status
     val savedList by viewModel.savedMangaList.collectAsStateWithLifecycle()
     val currentSavedItem = remember(savedList, source, slug) {
         savedList.find { it.id == "$source:$slug" }
     }
     isMangaSaved = currentSavedItem != null
 
+    // Observe hasil aksi save/remove dari ViewModel, lalu tampilkan Toast
+    val libraryAction by viewModel.libraryActionResult.collectAsStateWithLifecycle()
+    LaunchedEffect(libraryAction) {
+        when (libraryAction) {
+            is MangaViewModel.LibraryAction.Saved -> {
+                Toast.makeText(context, "Saved to Library!", Toast.LENGTH_SHORT).show()
+                viewModel.onLibraryActionHandled()
+            }
+            is MangaViewModel.LibraryAction.Removed -> {
+                Toast.makeText(context, "Removed from library", Toast.LENGTH_SHORT).show()
+                viewModel.onLibraryActionHandled()
+            }
+            is MangaViewModel.LibraryAction.Error -> {
+                val msg = (libraryAction as MangaViewModel.LibraryAction.Error).message
+                Toast.makeText(context, "Error: $msg", Toast.LENGTH_SHORT).show()
+                viewModel.onLibraryActionHandled()
+            }
+            null -> {}
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(detailManga?.title ?: "Manga Detail", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = {
+                    Text(
+                        detailManga?.title ?: "Manga Detail",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
+                    // Sekarang cukup panggil ViewModel — tidak perlu scope/coroutine di sini
                     IconButton(
                         onClick = {
                             val manga = detailManga
                             if (manga != null) {
-                                scope.launch {
-                                    if (isMangaSaved) {
-                                        viewModel.repository.removeManga(manga.id)
-                                        Toast.makeText(context, "Removed from library", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        viewModel.repository.saveManga(manga.copy(title = manga.title.takeIf { it.isNotBlank() } ?: titleFromSlug(slug)))
-                                        Toast.makeText(context, "Saved to Library!", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
+                                viewModel.toggleMangaSaved(manga, isMangaSaved, slug)
                             }
                         }
                     ) {
@@ -624,7 +557,10 @@ fun MangaDetailScreen(
                 CircularProgressIndicator()
             }
         } else if (error != null) {
-            Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 Text(text = "Error: $error", color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
             }
         } else if (detailManga != null) {
@@ -632,19 +568,11 @@ fun MangaDetailScreen(
             val displayTitle = manga.title.takeIf { it.isNotBlank() } ?: titleFromSlug(slug)
 
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentPadding = PaddingValues(bottom = 32.dp)
             ) {
-                // Header Details Row
                 item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        // Poster in top-left
+                    Row(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                         Box(
                             modifier = Modifier
                                 .size(110.dp, 155.dp)
@@ -670,36 +598,23 @@ fun MangaDetailScreen(
 
                         Spacer(modifier = Modifier.width(16.dp))
 
-                        // Text Details layout on right of poster
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = displayTitle,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground
                             )
-
                             Spacer(modifier = Modifier.height(8.dp))
-
                             Text(
                                 text = "Source: $source",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-
                             Spacer(modifier = Modifier.height(4.dp))
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Status: ",
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(text = "Status: ", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(4.dp))
@@ -714,9 +629,7 @@ fun MangaDetailScreen(
                                     )
                                 }
                             }
-
                             Spacer(modifier = Modifier.height(6.dp))
-
                             Text(
                                 text = "Author: ${manga.author ?: "Unknown"}",
                                 fontSize = 12.sp,
@@ -728,20 +641,11 @@ fun MangaDetailScreen(
                     }
                 }
 
-                // Synopsis/Description
                 item {
                     if (!manga.description.isNullOrBlank()) {
                         var isExpanded by remember { mutableStateOf(false) }
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = "Synopsis",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
+                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                            Text(text = "Synopsis", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = manga.description!!,
@@ -755,14 +659,13 @@ fun MangaDetailScreen(
                     }
                 }
 
-                // Progress Tracker Badge (if last read coordinates are available!)
                 if (currentSavedItem != null && currentSavedItem.lastReadChapterName != null) {
                     item {
                         Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                            )
                         ) {
                             Row(
                                 modifier = Modifier.padding(12.dp),
@@ -779,7 +682,6 @@ fun MangaDetailScreen(
                     }
                 }
 
-                // Chapter List title
                 item {
                     Text(
                         text = "Chapters (${detailChapters.size})",
@@ -789,7 +691,6 @@ fun MangaDetailScreen(
                     )
                 }
 
-                // Chapters items list
                 if (detailChapters.isEmpty()) {
                     item {
                         Box(
@@ -807,7 +708,8 @@ fun MangaDetailScreen(
                                 Text(
                                     text = chapter.name,
                                     fontWeight = if (isRead) FontWeight.Normal else FontWeight.Medium,
-                                    color = if (isRead) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface
+                                    color = if (isRead) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                            else MaterialTheme.colorScheme.onSurface
                                 )
                             },
                             supportingContent = {
@@ -826,9 +728,7 @@ fun MangaDetailScreen(
                                 }
                             },
                             modifier = Modifier
-                                .clickable {
-                                    navController.navigate("reader/$source/$slug/${chapter.id}")
-                                }
+                                .clickable { navController.navigate("reader/$source/$slug/${chapter.id}") }
                                 .padding(horizontal = 8.dp)
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
@@ -837,13 +737,6 @@ fun MangaDetailScreen(
             }
         }
     }
-}
-
-// Convert slug like "title-here-slug" to neat title "Title Here Slug" for fallbacks
-fun titleFromSlug(slug: String): String {
-    return slug.replace("-", " ").replace("_", " ")
-        .split(" ")
-        .joinToString(" ") { word -> word.lowercase().replaceFirstChar { it.uppercase() } }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -868,7 +761,6 @@ fun MangaReaderScreen(
     val mangaDetail by viewModel.detailManga.collectAsStateWithLifecycle()
     val mangaTitle = mangaDetail?.title ?: titleFromSlug(slug)
 
-    // Find index of current chapter
     val curIndex = remember(chaptersList, chapterId) {
         chaptersList.indexOfFirst { it.id == chapterId }
     }
@@ -878,7 +770,6 @@ fun MangaReaderScreen(
         viewModel.loadChapterPages(source, slug, ch)
     }
 
-    // Interactive Zoom Scales
     var zoomScale by remember { mutableStateOf(1f) }
     var zoomOffset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
 
@@ -897,7 +788,6 @@ fun MangaReaderScreen(
                     }
                 },
                 actions = {
-                    // Zoom actions resetting zoom scales
                     if (zoomScale != 1f) {
                         IconButton(onClick = {
                             zoomScale = 1f
@@ -919,11 +809,10 @@ fun MangaReaderScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Previous Chapter Action button
                     IconButton(
                         onClick = {
                             if (curIndex != -1 && curIndex < chaptersList.size - 1) {
-                                val prevChap = chaptersList[curIndex + 1] // list ordered newest to oldest
+                                val prevChap = chaptersList[curIndex + 1]
                                 navController.navigate("reader/$source/$slug/${prevChap.id}") {
                                     popUpTo("reader/$source/$slug/$chapterId") { inclusive = true }
                                 }
@@ -935,21 +824,17 @@ fun MangaReaderScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev Chapter")
                     }
 
-                    // Refresh Button
                     IconButton(onClick = {
                         val ch = currentChapter
-                        if (ch != null) {
-                            viewModel.loadChapterPages(source, slug, ch)
-                        }
+                        if (ch != null) viewModel.loadChapterPages(source, slug, ch)
                     }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh Pages")
                     }
 
-                    // Next Chapter Action button
                     IconButton(
                         onClick = {
                             if (curIndex > 0) {
-                                val nextChap = chaptersList[curIndex - 1] // newest to oldest
+                                val nextChap = chaptersList[curIndex - 1]
                                 navController.navigate("reader/$source/$slug/${nextChap.id}") {
                                     popUpTo("reader/$source/$slug/$chapterId") { inclusive = true }
                                 }
@@ -968,81 +853,60 @@ fun MangaReaderScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(Color.Black) // Dark background for optimal focus on manga
+                .background(Color.Black)
         ) {
-            val stateVal = pagesState
-            when (stateVal) {
+            when (val stateVal = pagesState) {
                 is UiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
                 is UiState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = stateVal.message,
-                            color = Color.White,
-                            textAlign = TextAlign.Center
-                        )
+                    Box(
+                        modifier = Modifier.fillMaxSize().padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = stateVal.message, color = Color.White, textAlign = TextAlign.Center)
                     }
                 }
                 is UiState.Success -> {
                     val imageUrls = stateVal.data
-
-                    // Simple Tap to zoom modifier logic
                     val scaleModifier = Modifier
                         .pointerInput(tapToZoom) {
                             if (tapToZoom) {
                                 detectTransformGestures { _, pan, zoom, _ ->
                                     zoomScale = (zoomScale * zoom).coerceIn(1f, 4f)
-                                    zoomOffset = if (zoomScale > 1f) {
-                                        zoomOffset + pan
-                                    } else {
-                                        androidx.compose.ui.geometry.Offset.Zero
-                                    }
+                                    zoomOffset = if (zoomScale > 1f) zoomOffset + pan
+                                                 else androidx.compose.ui.geometry.Offset.Zero
                                 }
                             }
                         }
-                        .graphicsLayer(
-                            scaleX = zoomScale,
-                            scaleY = zoomScale,
-                            translationX = zoomOffset.x,
-                            translationY = zoomOffset.y
-                        )
+                        .graphicsLayer(scaleX = zoomScale, scaleY = zoomScale, translationX = zoomOffset.x, translationY = zoomOffset.y)
 
                     if (readerMode == "vertical") {
                         LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .then(scaleModifier),
+                            modifier = Modifier.fillMaxSize().then(scaleModifier),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             items(imageUrls) { imageUrl ->
                                 AsyncImage(
                                     model = imageUrl,
                                     contentDescription = "Manga Page",
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .wrapContentHeight(),
+                                    modifier = Modifier.fillMaxWidth().wrapContentHeight(),
                                     contentScale = ContentScale.FillWidth
                                 )
                             }
                         }
                     } else {
-                        // Horizontal reader
                         LazyRow(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .then(scaleModifier),
+                            modifier = Modifier.fillMaxSize().then(scaleModifier),
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             items(imageUrls) { imageUrl ->
                                 AsyncImage(
                                     model = imageUrl,
                                     contentDescription = "Manga Page",
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .wrapContentWidth(),
+                                    modifier = Modifier.fillMaxHeight().wrapContentWidth(),
                                     contentScale = ContentScale.FillHeight
                                 )
                             }
@@ -1060,19 +924,13 @@ fun MangaReaderScreen(
 // -------------------------------------------------------------------------------------------------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(
-    viewModel: MangaViewModel,
-    onNavigateBack: () -> Unit
-) {
+fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
     val context = LocalContext.current
     val liveColorVal by viewModel.settingsManager.themeColor.collectAsStateWithLifecycle()
-
     val kcEnabled by viewModel.settingsManager.komikCastEnabled.collectAsStateWithLifecycle()
     val sgEnabled by viewModel.settingsManager.shinigamiEnabled.collectAsStateWithLifecycle()
-
     val readerMode by viewModel.settingsManager.readerMode.collectAsStateWithLifecycle()
     val tapToZoom by viewModel.settingsManager.tapToZoom.collectAsStateWithLifecycle()
-
     val cacheBytes by viewModel.settingsManager.cacheBytesUsed.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -1094,7 +952,6 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // Section header: Display & Themes
             SettingsHeader(title = "Display & Styling")
 
             Text(
@@ -1105,11 +962,8 @@ fun SettingsScreen(
                 modifier = Modifier.padding(vertical = 8.dp)
             )
 
-            // Horizontal color picker dots
             LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(ThemeSeedColors) { seedColor ->
@@ -1138,18 +992,13 @@ fun SettingsScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Section header: Manga Source Enabled
             SettingsHeader(title = "Manga Sources")
 
             ListItem(
                 headlineContent = { Text("KomikCast Indonesian Provider") },
                 supportingContent = { Text("Fetch popular manga and search from KomikCast") },
                 trailingContent = {
-                    Switch(
-                        checked = kcEnabled,
-                        onCheckedChange = { viewModel.settingsManager.setKomikCastEnabled(it) }
-                    )
+                    Switch(checked = kcEnabled, onCheckedChange = { viewModel.settingsManager.setKomikCastEnabled(it) })
                 }
             )
 
@@ -1157,21 +1006,16 @@ fun SettingsScreen(
                 headlineContent = { Text("Shinigami Indonesian Provider") },
                 supportingContent = { Text("Fetch popular manga and search from Shinigami API") },
                 trailingContent = {
-                    Switch(
-                        checked = sgEnabled,
-                        onCheckedChange = { viewModel.settingsManager.setShinigamiEnabled(it) }
-                    )
+                    Switch(checked = sgEnabled, onCheckedChange = { viewModel.settingsManager.setShinigamiEnabled(it) })
                 }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Section header: Reader settings
             SettingsHeader(title = "Reader Settings")
 
             ListItem(
                 headlineContent = { Text("Reading Orientation direction") },
-                supportingContent = { Text(if (readerMode == "vertical") "Vertical Webtoon continuous continuous" else "Horizontal single page flip") },
+                supportingContent = { Text(if (readerMode == "vertical") "Vertical Webtoon continuous" else "Horizontal single page flip") },
                 trailingContent = {
                     Row {
                         FilterChip(
@@ -1193,16 +1037,11 @@ fun SettingsScreen(
                 headlineContent = { Text("Tap to zoom page scale gesture") },
                 supportingContent = { Text("Allows double pinch/pan zooming inside manga pages") },
                 trailingContent = {
-                    Switch(
-                        checked = tapToZoom,
-                        onCheckedChange = { viewModel.settingsManager.setTapToZoom(it) }
-                    )
+                    Switch(checked = tapToZoom, onCheckedChange = { viewModel.settingsManager.setTapToZoom(it) })
                 }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Section header: Manga Cache
             SettingsHeader(title = "Manga Store Cache")
 
             val cacheMbFormat = remember(cacheBytes) {
