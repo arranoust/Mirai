@@ -154,12 +154,41 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _detailLoading.value = true
             _detailError.value = null
-            _detailManga.value = fallbackManga
+
+            val id = "$source:$slug"
+            val actualFallback = fallbackManga ?: run {
+                val saved = repository.getSavedManga(id)
+                if (saved != null) {
+                    Manga(
+                        id = saved.id,
+                        slug = saved.slug,
+                        source = saved.source,
+                        title = saved.title,
+                        thumbnailUrl = saved.thumbnailUrl,
+                        author = saved.author,
+                        status = saved.status,
+                        description = saved.description,
+                        genres = saved.genres
+                    )
+                } else {
+                    val popularList = if (source == "KomikCast") {
+                        (_komikCastPopular.value as? UiState.Success)?.data
+                    } else {
+                        (_shinigamiPopular.value as? UiState.Success)?.data
+                    }
+                    popularList?.find { it.slug == slug }
+                        ?: (searchResult.value as? UiState.Success)?.data?.find { it.slug == slug && it.source == source }
+                }
+            }
+            _detailManga.value = actualFallback
 
             try {
                 val info = repository.getMangaDetails(source, slug)
-                val fullManga = if (fallbackManga != null) {
-                    info.copy(title = fallbackManga.title, thumbnailUrl = fallbackManga.thumbnailUrl)
+                val fullManga = if (actualFallback != null) {
+                    info.copy(
+                        title = actualFallback.title.takeIf { it.isNotBlank() } ?: info.title,
+                        thumbnailUrl = actualFallback.thumbnailUrl ?: info.thumbnailUrl
+                    )
                 } else {
                     info
                 }

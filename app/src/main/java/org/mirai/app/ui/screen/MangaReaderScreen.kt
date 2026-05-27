@@ -1,6 +1,12 @@
 package org.mirai.app.ui.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -66,84 +72,10 @@ fun MangaReaderScreen(
 
     var zoomScale by remember { mutableStateOf(1f) }
     var zoomOffset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    var barsVisible by remember { mutableStateOf(true) }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                windowInsets = WindowInsets(0, 0, 0, 0), // FIX: Mencegah gap di atas TopAppBar karena nested padding MainActivity
-                title = {
-                    Column {
-                        Text(mangaTitle, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(currentChapter?.name ?: "Loading...", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    if (zoomScale != 1f) {
-                        IconButton(onClick = {
-                            zoomScale = 1f
-                            zoomOffset = androidx.compose.ui.geometry.Offset.Zero
-                        }) {
-                            Icon(Icons.Default.ZoomOut, contentDescription = "Reset Zoom")
-                        }
-                    }
-                }
-            )
-        },
-        bottomBar = {
-            BottomAppBar(
-                windowInsets = WindowInsets(0, 0, 0, 0), // FIX: Mencegah gap tambahan di bawah BottomAppBar internal karena bentrokan insets
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentPadding = PaddingValues(horizontal = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = {
-                            if (curIndex != -1 && curIndex < chaptersList.size - 1) {
-                                val prevChap = chaptersList[curIndex + 1]
-                                navController.navigate("reader/$source/$slug/${prevChap.id}") {
-                                    popUpTo("reader/$source/$slug/$chapterId") { inclusive = true }
-                                }
-                            }
-                        },
-                        enabled = curIndex != -1 && curIndex < chaptersList.size - 1,
-                        modifier = Modifier.testTag("prev_chapter_btn")
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev Chapter")
-                    }
-
-                    IconButton(onClick = {
-                        val ch = currentChapter
-                        if (ch != null) viewModel.loadChapterPages(source, slug, ch)
-                    }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh Pages")
-                    }
-
-                    IconButton(
-                        onClick = {
-                            if (curIndex > 0) {
-                                val nextChap = chaptersList[curIndex - 1]
-                                navController.navigate("reader/$source/$slug/${nextChap.id}") {
-                                    popUpTo("reader/$source/$slug/$chapterId") { inclusive = true }
-                                }
-                            }
-                        },
-                        enabled = curIndex > 0,
-                        modifier = Modifier.testTag("next_chapter_btn")
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Chapter")
-                    }
-                }
-            }
-        }
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -177,6 +109,23 @@ fun MangaReaderScreen(
                                 }
                             }
                         }
+                        .pointerInput(tapToZoom) {
+                            detectTapGestures(
+                                onTap = {
+                                    barsVisible = !barsVisible
+                                },
+                                onDoubleTap = {
+                                    if (tapToZoom) {
+                                        if (zoomScale > 1f) {
+                                            zoomScale = 1f
+                                            zoomOffset = androidx.compose.ui.geometry.Offset.Zero
+                                        } else {
+                                            zoomScale = 2.5f
+                                        }
+                                    }
+                                }
+                            )
+                        }
                         .graphicsLayer(scaleX = zoomScale, scaleY = zoomScale, translationX = zoomOffset.x, translationY = zoomOffset.y)
 
                     val context = LocalContext.current
@@ -184,7 +133,8 @@ fun MangaReaderScreen(
                     if (readerMode == "vertical") {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize().then(scaleModifier),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            userScrollEnabled = zoomScale == 1f
                         ) {
                             items(imageUrls) { imageUrl ->
                                 AsyncImage(
@@ -203,7 +153,8 @@ fun MangaReaderScreen(
                     } else {
                         LazyRow(
                             modifier = Modifier.fillMaxSize().then(scaleModifier),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            userScrollEnabled = zoomScale == 1f
                         ) {
                             items(imageUrls) { imageUrl ->
                                 AsyncImage(
@@ -222,6 +173,99 @@ fun MangaReaderScreen(
                     }
                 }
                 else -> {}
+            }
+
+            // Animated TopAppBar Overlay
+            AnimatedVisibility(
+                visible = barsVisible,
+                enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
+                TopAppBar(
+                    windowInsets = WindowInsets.statusBars,
+                    title = {
+                        Column {
+                            Text(mangaTitle, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(currentChapter?.name ?: "Loading...", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        if (zoomScale != 1f) {
+                            IconButton(onClick = {
+                                zoomScale = 1f
+                                zoomOffset = androidx.compose.ui.geometry.Offset.Zero
+                            }) {
+                                Icon(Icons.Default.ZoomOut, contentDescription = "Reset Zoom")
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                    )
+                )
+            }
+
+            // Animated BottomAppBar Overlay
+            AnimatedVisibility(
+                visible = barsVisible,
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
+                BottomAppBar(
+                    windowInsets = WindowInsets.navigationBars,
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = {
+                                if (curIndex != -1 && curIndex < chaptersList.size - 1) {
+                                    val prevChap = chaptersList[curIndex + 1]
+                                    navController.navigate("reader/$source/$slug/${prevChap.id}") {
+                                        popUpTo("reader/$source/$slug/$chapterId") { inclusive = true }
+                                    }
+                                }
+                            },
+                            enabled = curIndex != -1 && curIndex < chaptersList.size - 1,
+                            modifier = Modifier.testTag("prev_chapter_btn")
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev Chapter")
+                        }
+
+                        IconButton(onClick = {
+                            val ch = currentChapter
+                            if (ch != null) viewModel.loadChapterPages(source, slug, ch)
+                        }) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh Pages")
+                        }
+
+                        IconButton(
+                            onClick = {
+                                if (curIndex > 0) {
+                                    val nextChap = chaptersList[curIndex - 1]
+                                    navController.navigate("reader/$source/$slug/${nextChap.id}") {
+                                        popUpTo("reader/$source/$slug/$chapterId") { inclusive = true }
+                                    }
+                                }
+                            },
+                            enabled = curIndex > 0,
+                            modifier = Modifier.testTag("next_chapter_btn")
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Chapter")
+                        }
+                    }
+                }
             }
         }
     }
