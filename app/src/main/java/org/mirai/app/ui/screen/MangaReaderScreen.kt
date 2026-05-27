@@ -80,7 +80,6 @@ fun MangaReaderScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .background(Color.Black)
         ) {
             when (val stateVal = pagesState) {
