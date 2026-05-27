@@ -146,7 +146,10 @@ fun HomeScreen(
             ) {
                 if (kcEnabled) {
                     item {
-                        SourceLaneHeader(title = "KomikCast") {}
+                        SourceLaneHeader(
+                        title = "KomikCast",
+                        onClick = { navController.navigate("browse/KomikCast") }
+                        )
                         SourceMangaLane(sourceState = kcLatest, navController = navController)
                         Spacer(modifier = Modifier.height(16.dp))
                     }
@@ -154,7 +157,10 @@ fun HomeScreen(
 
                 if (sgEnabled) {
                     item {
-                        SourceLaneHeader(title = "Shinigami") {}
+                        SourceLaneHeader(
+                        title = "Shinigami",
+                        onClick = { navController.navigate("browse/Shinigami") }
+                        )
                         SourceMangaLane(sourceState = sgLatest, navController = navController)
                         Spacer(modifier = Modifier.height(16.dp))
                     }

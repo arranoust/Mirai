@@ -150,6 +150,30 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
         _searchQuery.value = query
     }
 
+    // Browse/Explore state
+    private val _browseList = MutableStateFlow<UiState<List<Manga>>>(UiState.Loading)
+    val browseList: StateFlow<UiState<List<Manga>>> = _browseList
+
+    private val _browsePage = MutableStateFlow(1)
+
+    fun loadBrowse(source: String, page: Int = 1, filter: String = "all") {
+        viewModelScope.launch {
+            _browseList.value = UiState.Loading
+            try {
+                val result = when (filter) {
+                    "manga"   -> repository.search(source, "manga", page)
+                    "manhwa"  -> repository.search(source, "manhwa", page)
+                    "manhua"  -> repository.search(source, "manhua", page)
+                    else      -> repository.getPopular(source, page)
+                }
+                _browseList.value = if (result.isNotEmpty())
+                    UiState.Success(result) else UiState.Error("Tidak ada data")
+            } catch (e: Exception) {
+                _browseList.value = UiState.Error(e.message ?: "Error")
+            }
+        }
+    }
+
     fun loadMangaDetail(source: String, slug: String, fallbackManga: Manga?) {
         viewModelScope.launch {
             _detailLoading.value = true

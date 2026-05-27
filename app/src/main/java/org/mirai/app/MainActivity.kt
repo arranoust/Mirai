@@ -135,6 +135,18 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable(
+                            route = "browse/{source}",
+                            arguments = listOf(navArgument("source") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val source = backStackEntry.arguments?.getString("source") ?: ""
+                            BrowseScreen(
+                                source = source,
+                                viewModel = viewModel,
+                                navController = navController
+                            )
+                        }
+
+                        composable(
                             route = "detail/{source}/{slug}",
                             arguments = listOf(
                                 navArgument("source") { type = NavType.StringType },
