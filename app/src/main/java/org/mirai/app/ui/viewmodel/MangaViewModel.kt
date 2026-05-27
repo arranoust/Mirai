@@ -11,6 +11,8 @@ import org.mirai.app.data.model.SavedManga
 import org.mirai.app.data.repository.MangaRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 
 sealed interface UiState<out T> {
     object Idle : UiState<Nothing>
@@ -129,6 +131,18 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
                     UiState.Error("Failed to load Shinigami popularity list.")
                 }
             }
+        }
+    }
+
+    private suspend fun safeLoad(block: suspend () -> List<Manga>): UiState<List<Manga>> {
+        return try {
+            val result = withTimeout(10_000L) { block() }
+            if (result.isNotEmpty()) UiState.Success(result)
+            else UiState.Error("Tidak ada data")
+        } catch (e: TimeoutCancellationException) {
+            UiState.Error("Koneksi timeout")
+        } catch (e: Exception) {
+            UiState.Error("Gagal memuat: ${e.message}")
         }
     }
 

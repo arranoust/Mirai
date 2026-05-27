@@ -19,39 +19,9 @@ import java.util.concurrent.TimeUnit
 class MangaRepository(
     private val savedMangaDao: SavedMangaDao
 ) {
-    private val moshi = Moshi.Builder()
-        .addLast(KotlinJsonAdapterFactory())
-        .build()
+    private val komikCastService = NetworkModule.komikCastService
+    private val shinigamiService = NetworkModule.shinigamiService
 
-    private val okHttpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .addInterceptor(HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.HEADERS
-        })
-        .addInterceptor { chain ->
-            val req = chain.request().newBuilder()
-                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                .build()
-            chain.proceed(req)
-        }
-        .build()
-
-    private val komikCastService: KomikCastService = Retrofit.Builder()
-        .baseUrl("https://be.komikcast.cc/")
-        .client(okHttpClient)
-        .addConverterFactory(MoshiConverterFactory.create(moshi))
-        .build()
-        .create(KomikCastService::class.java)
-
-    private val shinigamiService: ShinigamiService = Retrofit.Builder()
-        .baseUrl("https://api.shngm.io/")
-        .client(okHttpClient)
-        .addConverterFactory(MoshiConverterFactory.create(moshi))
-        .build()
-        .create(ShinigamiService::class.java)
-
-    // Room Database Observables
     val savedMangas: Flow<List<SavedManga>> = savedMangaDao.getAllSavedManga()
 
     fun isMangaSaved(mangaId: String): Flow<Boolean> = savedMangaDao.isMangaSavedFlow(mangaId)

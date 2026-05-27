@@ -32,6 +32,9 @@ import org.mirai.app.data.model.Chapter
 import org.mirai.app.ui.viewmodel.MangaViewModel
 import org.mirai.app.ui.viewmodel.UiState
 import org.mirai.app.ui.viewmodel.titleFromSlug
+import androidx.compose.ui.platform.LocalContext
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -176,6 +179,8 @@ fun MangaReaderScreen(
                         }
                         .graphicsLayer(scaleX = zoomScale, scaleY = zoomScale, translationX = zoomOffset.x, translationY = zoomOffset.y)
 
+                    val context = LocalContext.current
+
                     if (readerMode == "vertical") {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize().then(scaleModifier),
@@ -183,7 +188,12 @@ fun MangaReaderScreen(
                         ) {
                             items(imageUrls) { imageUrl ->
                                 AsyncImage(
-                                    model = imageUrl,
+                                    model = ImageRequest.Builder(context)
+                                        .data(imageUrl)
+                                        .memoryCachePolicy(CachePolicy.ENABLED)
+                                        .diskCachePolicy(CachePolicy.ENABLED)
+                                        .crossfade(true) 
+                                        .build(),
                                     contentDescription = "Manga Page",
                                     modifier = Modifier.fillMaxWidth().wrapContentHeight(),
                                     contentScale = ContentScale.FillWidth
@@ -197,7 +207,12 @@ fun MangaReaderScreen(
                         ) {
                             items(imageUrls) { imageUrl ->
                                 AsyncImage(
-                                    model = imageUrl,
+                                    model = ImageRequest.Builder(context)
+                                        .data(imageUrl)
+                                        .memoryCachePolicy(CachePolicy.ENABLED)
+                                        .diskCachePolicy(CachePolicy.ENABLED)
+                                        .crossfade(true) 
+                                        .build(),
                                     contentDescription = "Manga Page",
                                     modifier = Modifier.fillMaxHeight().wrapContentWidth(),
                                     contentScale = ContentScale.FillHeight

@@ -255,7 +255,7 @@ fun SourceMangaLane(sourceState: UiState<List<Manga>>, navController: NavControl
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(sourceState.data) { manga ->
+                items(sourceState.data, key = { it.id }) { manga ->
                     MangaGridCard(manga = manga, navController = navController)
                 }
             }

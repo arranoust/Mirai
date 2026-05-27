@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,8 +28,13 @@ import org.mirai.app.data.model.Manga
 
 @Composable
 fun MangaGridCard(manga: Manga, navController: NavController, modifier: Modifier = Modifier) {
+
+    val onClick = remember(manga.source, manga.slug) {
+        { navController.navigate("detail/${manga.source}/${manga.slug}") }
+    }
+
     Card(
-        onClick = { navController.navigate("detail/${manga.source}/${manga.slug}") },
+        onClick = onClick,
         modifier = modifier.width(125.dp).testTag("manga_card_${manga.slug}"),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
