@@ -28,11 +28,11 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
     val settingsManager = SettingsManager(application)
 
     // HOME STATES
-    private val _komikCastPopular = MutableStateFlow<UiState<List<Manga>>>(UiState.Loading)
-    val komikCastPopular: StateFlow<UiState<List<Manga>>> = _komikCastPopular
+    private val _komikCastLatest = MutableStateFlow<UiState<List<Manga>>>(UiState.Loading)
+    val komikCastLatest: StateFlow<UiState<List<Manga>>> = _komikCastLatest
 
-    private val _shinigamiPopular = MutableStateFlow<UiState<List<Manga>>>(UiState.Loading)
-    val shinigamiPopular: StateFlow<UiState<List<Manga>>> = _shinigamiPopular
+    private val _shinigamiLatest = MutableStateFlow<UiState<List<Manga>>>(UiState.Loading)
+    val shinigamiLatest: StateFlow<UiState<List<Manga>>> = _shinigamiLatest
 
     val savedMangaList: StateFlow<List<SavedManga>> = repository.savedMangas
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -111,12 +111,12 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadHomeData() {
         viewModelScope.launch {
-            _komikCastPopular.value = UiState.Loading
-            _shinigamiPopular.value = UiState.Loading
+            _komikCastLatest.value = UiState.Loading
+            _shinigamiLatest.value = UiState.Loading
 
             launch {
-                val kcList = repository.getPopular("KomikCast", 1)
-                _komikCastPopular.value = if (kcList.isNotEmpty()) {
+                val kcList = repository.getLatest("KomikCast", 1)
+                _komikCastLatest.value = if (kcList.isNotEmpty()) {
                     UiState.Success(kcList)
                 } else {
                     UiState.Error("Failed to load KomikCast popularity list.")
@@ -124,8 +124,8 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             launch {
-                val sgList = repository.getPopular("Shinigami", 1)
-                _shinigamiPopular.value = if (sgList.isNotEmpty()) {
+                val sgList = repository.getLatest("Shinigami", 1)
+                _shinigamiLatest.value = if (sgList.isNotEmpty()) {
                     UiState.Success(sgList)
                 } else {
                     UiState.Error("Failed to load Shinigami popularity list.")
@@ -171,12 +171,12 @@ class MangaViewModel(application: Application) : AndroidViewModel(application) {
                         genres = saved.genres
                     )
                 } else {
-                    val popularList = if (source == "KomikCast") {
-                        (_komikCastPopular.value as? UiState.Success)?.data
+                    val latestList = if (source == "KomikCast") {
+                        (_komikCastLatest.value as? UiState.Success)?.data
                     } else {
-                        (_shinigamiPopular.value as? UiState.Success)?.data
+                        (_shinigamiLatest.value as? UiState.Success)?.data
                     }
-                    popularList?.find { it.slug == slug }
+                    latestList?.find { it.slug == slug }
                         ?: (searchResult.value as? UiState.Success)?.data?.find { it.slug == slug && it.source == source }
                 }
             }

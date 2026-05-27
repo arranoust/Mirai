@@ -44,8 +44,8 @@ fun HomeScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchState by viewModel.searchResult.collectAsStateWithLifecycle()
 
-    val kcPopular by viewModel.komikCastPopular.collectAsStateWithLifecycle()
-    val sgPopular by viewModel.shinigamiPopular.collectAsStateWithLifecycle()
+    val kcLatest by viewModel.komikCastLatest.collectAsStateWithLifecycle()
+    val sgLatest by viewModel.shinigamiLatest.collectAsStateWithLifecycle()
 
     val kcEnabled by viewModel.settingsManager.komikCastEnabled.collectAsStateWithLifecycle()
     val sgEnabled by viewModel.settingsManager.shinigamiEnabled.collectAsStateWithLifecycle()
@@ -147,7 +147,7 @@ fun HomeScreen(
                 if (kcEnabled) {
                     item {
                         SourceLaneHeader(title = "KomikCast") {}
-                        SourceMangaLane(sourceState = kcPopular, navController = navController)
+                        SourceMangaLane(sourceState = kcLatest, navController = navController)
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
@@ -155,7 +155,7 @@ fun HomeScreen(
                 if (sgEnabled) {
                     item {
                         SourceLaneHeader(title = "Shinigami") {}
-                        SourceMangaLane(sourceState = sgPopular, navController = navController)
+                        SourceMangaLane(sourceState = sgLatest, navController = navController)
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
