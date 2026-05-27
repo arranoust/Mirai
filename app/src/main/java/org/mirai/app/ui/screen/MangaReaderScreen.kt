@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -150,24 +152,23 @@ fun MangaReaderScreen(
                             }
                         }
                     } else {
-                        LazyRow(
+                        val pagerState = rememberPagerState(pageCount = { imageUrls.size })
+                        HorizontalPager(
+                            state = pagerState,
                             modifier = Modifier.fillMaxSize().then(scaleModifier),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                             userScrollEnabled = zoomScale == 1f
-                        ) {
-                            items(imageUrls) { imageUrl ->
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context)
-                                        .data(imageUrl)
-                                        .memoryCachePolicy(CachePolicy.ENABLED)
-                                        .diskCachePolicy(CachePolicy.ENABLED)
-                                        .crossfade(true) 
-                                        .build(),
-                                    contentDescription = "Manga Page",
-                                    modifier = Modifier.fillMaxHeight().wrapContentWidth(),
-                                    contentScale = ContentScale.FillHeight
-                                )
-                            }
+                        ) { pageIndex ->
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(imageUrls[pageIndex])
+                                    .memoryCachePolicy(CachePolicy.ENABLED)
+                                    .diskCachePolicy(CachePolicy.ENABLED)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "Manga Page",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit
+                            )
                         }
                     }
                 }
