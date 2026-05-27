@@ -182,7 +182,7 @@ fun MangaReaderScreen(
                 modifier = Modifier.align(Alignment.TopCenter)
             ) {
                 TopAppBar(
-                    windowInsets = WindowInsets.statusBars,
+                    windowInsets = WindowInsets(0, 0, 0, 0),
                     title = {
                         Column {
                             Text(mangaTitle, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -218,7 +218,7 @@ fun MangaReaderScreen(
                 modifier = Modifier.align(Alignment.BottomCenter)
             ) {
                 BottomAppBar(
-                    windowInsets = WindowInsets.navigationBars,
+                    windowInsets = WindowInsets(0, 0, 0, 0),
                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
                     contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
