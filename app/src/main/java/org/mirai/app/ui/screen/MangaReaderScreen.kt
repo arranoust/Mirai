@@ -12,8 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -35,7 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
 import org.mirai.app.data.model.Chapter
 import org.mirai.app.ui.viewmodel.MangaViewModel
 import org.mirai.app.ui.viewmodel.UiState
@@ -43,6 +44,7 @@ import org.mirai.app.ui.viewmodel.titleFromSlug
 import androidx.compose.ui.platform.LocalContext
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import coil.size.Scale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,8 +75,10 @@ fun MangaReaderScreen(
     }
 
     var zoomScale by remember { mutableStateOf(1f) }
-    var zoomOffset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    var zoomOffset by remember { mutableStateOf(Offset.Zero) }
     var barsVisible by remember { mutableStateOf(true) }
+
+    val context = LocalContext.current
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
@@ -86,6 +90,7 @@ fun MangaReaderScreen(
         ) {
             when (val stateVal = pagesState) {
                 is UiState.Loading -> {
+                    // Loading spinner untuk seluruh chapter (saat pertama load)
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
@@ -106,7 +111,7 @@ fun MangaReaderScreen(
                                 detectTransformGestures { _, pan, zoom, _ ->
                                     zoomScale = (zoomScale * zoom).coerceIn(1f, 4f)
                                     zoomOffset = if (zoomScale > 1f) zoomOffset + pan
-                                                 else androidx.compose.ui.geometry.Offset.Zero
+                                                 else Offset.Zero
                                 }
                             }
                         }
@@ -119,7 +124,7 @@ fun MangaReaderScreen(
                                     if (tapToZoom) {
                                         if (zoomScale > 1f) {
                                             zoomScale = 1f
-                                            zoomOffset = androidx.compose.ui.geometry.Offset.Zero
+                                            zoomOffset = Offset.Zero
                                         } else {
                                             zoomScale = 2.5f
                                         }
@@ -127,48 +132,54 @@ fun MangaReaderScreen(
                                 }
                             )
                         }
-                        .graphicsLayer(scaleX = zoomScale, scaleY = zoomScale, translationX = zoomOffset.x, translationY = zoomOffset.y)
-
-                    val context = LocalContext.current
+                        .graphicsLayer(
+                            scaleX = zoomScale,
+                            scaleY = zoomScale,
+                            translationX = zoomOffset.x,
+                            translationY = zoomOffset.y
+                        )
 
                     if (readerMode == "vertical") {
+                        val listState = rememberLazyListState()
+
+                        // Reset ke halaman 1 setiap kali chapter berubah
+                        LaunchedEffect(chapterId) {
+                            listState.scrollToItem(0)
+                        }
+
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier.fillMaxSize().then(scaleModifier),
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                             userScrollEnabled = zoomScale == 1f
                         ) {
                             items(imageUrls) { imageUrl ->
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context)
-                                        .data(imageUrl)
-                                        .memoryCachePolicy(CachePolicy.ENABLED)
-                                        .diskCachePolicy(CachePolicy.ENABLED)
-                                        .crossfade(true) 
-                                        .build(),
-                                    contentDescription = "Manga Page",
-                                    modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+                                MangaPageImage(
+                                    imageUrl = imageUrl,
+                                    context = context,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .wrapContentHeight(),
                                     contentScale = ContentScale.FillWidth
                                 )
                             }
                         }
                     } else {
-                        val pagerState = rememberPagerState(pageCount = { imageUrls.size })
-                        HorizontalPager(
-                            state = pagerState,
+                        LazyRow(
                             modifier = Modifier.fillMaxSize().then(scaleModifier),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                             userScrollEnabled = zoomScale == 1f
-                        ) { pageIndex ->
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(imageUrls[pageIndex])
-                                    .memoryCachePolicy(CachePolicy.ENABLED)
-                                    .diskCachePolicy(CachePolicy.ENABLED)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "Manga Page",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit
-                            )
+                        ) {
+                            items(imageUrls) { imageUrl ->
+                                MangaPageImage(
+                                    imageUrl = imageUrl,
+                                    context = context,
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .wrapContentWidth(),
+                                    contentScale = ContentScale.FillHeight
+                                )
+                            }
                         }
                     }
                 }
@@ -199,7 +210,7 @@ fun MangaReaderScreen(
                         if (zoomScale != 1f) {
                             IconButton(onClick = {
                                 zoomScale = 1f
-                                zoomOffset = androidx.compose.ui.geometry.Offset.Zero
+                                zoomOffset = Offset.Zero
                             }) {
                                 Icon(Icons.Default.ZoomOut, contentDescription = "Reset Zoom")
                             }
@@ -266,6 +277,73 @@ fun MangaReaderScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MangaPageImage(
+    imageUrl: String,
+    context: android.content.Context,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.FillWidth
+) {
+    SubcomposeAsyncImage(
+        model = ImageRequest.Builder(context)
+            .data(imageUrl)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            // Decode lebih cepat & hemat RAM di entry-level HP
+            .allowRgb565(true)
+            .crossfade(true)
+            .build(),
+        contentDescription = "Manga Page",
+        modifier = modifier,
+        contentScale = contentScale
+    ) {
+        when (painter.state) {
+            is AsyncImagePainter.State.Loading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(3f / 4f)
+                        .background(Color(0xFF1A1A1A)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+            is AsyncImagePainter.State.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(3f / 4f)
+                        .background(Color(0xFF1A1A1A)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.BrokenImage,
+                            contentDescription = "Error",
+                            tint = Color.Gray,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Gagal memuat",
+                            color = Color.Gray,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            }
+            else -> {
+                SubcomposeAsyncImageContent()
             }
         }
     }

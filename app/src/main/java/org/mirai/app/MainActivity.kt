@@ -33,8 +33,14 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val themeColor by viewModel.settingsManager.themeColor.collectAsStateWithLifecycle()
+            val isDynamicColor by viewModel.settingsManager.isDynamicColor.collectAsStateWithLifecycle()
+            val isDarkTheme by viewModel.settingsManager.isDarkTheme.collectAsStateWithLifecycle()
 
-            MyApplicationTheme(seedColorVal = themeColor) {
+            MyApplicationTheme(
+                seedColorVal = themeColor,
+                darkTheme = isDarkTheme,        // <-- sekarang bisa diubah
+                dynamicColor = isDynamicColor   // <-- Material You toggle
+            ) {
                 val navController = rememberNavController()
                 val currentBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = currentBackStackEntry?.destination?.route
@@ -42,7 +48,6 @@ class MainActivity : ComponentActivity() {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = {
-                        // Display bottom bar on root feeds ("home", "library", "settings")
                         val rootTabs = listOf("home", "library", "settings")
                         if (currentRoute in rootTabs) {
                             NavigationBar {

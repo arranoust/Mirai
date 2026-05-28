@@ -1,5 +1,6 @@
 package org.mirai.app.ui.screen
 
+import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -9,10 +10,14 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,35 +28,46 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.mirai.app.ui.viewmodel.MangaViewModel
 
+// Daftar warna seed yang bisa dipilih, tiap entry punya nama & warna
+data class ThemeSeedEntry(val name: String, val color: Color)
+
 val ThemeSeedColors = listOf(
-    Color(0xFF4A6572), // Slate Blue
-    Color(0xFF8D6E63), // Cocoa Bronze
-    Color(0xFFE53935), // Crimson Red
-    Color(0xFF1E88E5), // Vivid Blue
-    Color(0xFF43A047), // Emerald Green
-    Color(0xFF8E24AA)  // Purple Royal
+    ThemeSeedEntry("Slate Blue",    Color(0xFF4A6572)),
+    ThemeSeedEntry("Cocoa Bronze",  Color(0xFF8D6E63)),
+    ThemeSeedEntry("Crimson Red",   Color(0xFFE53935)),
+    ThemeSeedEntry("Vivid Blue",    Color(0xFF1E88E5)),
+    ThemeSeedEntry("Emerald Green", Color(0xFF43A047)),
+    ThemeSeedEntry("Purple Royal",  Color(0xFF8E24AA)),
+    ThemeSeedEntry("Sunset Orange", Color(0xFFF4511E)),
+    ThemeSeedEntry("Teal",          Color(0xFF00897B)),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
     val context = LocalContext.current
-    val liveColorVal by viewModel.settingsManager.themeColor.collectAsStateWithLifecycle()
-    val kcEnabled by viewModel.settingsManager.komikCastEnabled.collectAsStateWithLifecycle()
-    val sgEnabled by viewModel.settingsManager.shinigamiEnabled.collectAsStateWithLifecycle()
-    val readerMode by viewModel.settingsManager.readerMode.collectAsStateWithLifecycle()
-    val tapToZoom by viewModel.settingsManager.tapToZoom.collectAsStateWithLifecycle()
-    val cacheBytes by viewModel.settingsManager.cacheBytesUsed.collectAsStateWithLifecycle()
+
+    val liveColorVal  by viewModel.settingsManager.themeColor.collectAsStateWithLifecycle()
+    val isDynamicColor by viewModel.settingsManager.isDynamicColor.collectAsStateWithLifecycle()
+    val isDarkTheme   by viewModel.settingsManager.isDarkTheme.collectAsStateWithLifecycle()
+    val kcEnabled     by viewModel.settingsManager.komikCastEnabled.collectAsStateWithLifecycle()
+    val sgEnabled     by viewModel.settingsManager.shinigamiEnabled.collectAsStateWithLifecycle()
+    val readerMode    by viewModel.settingsManager.readerMode.collectAsStateWithLifecycle()
+    val tapToZoom     by viewModel.settingsManager.tapToZoom.collectAsStateWithLifecycle()
+    val cacheBytes    by viewModel.settingsManager.cacheBytesUsed.collectAsStateWithLifecycle()
+
+    // State untuk dialog popup pilih warna
+    var showColorDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        // FIX 1: Matikan insets bawaan agar tidak membuat gap kosong di atas bottom bar
-        contentWindowInsets = WindowInsets(0, 0, 0, 0), 
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
-                windowInsets = WindowInsets(0, 0, 0, 0), 
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 title = { Text("Settings", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
@@ -64,61 +80,123 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                // FIX 2: Hanya ambil top padding dari Scaffold (untuk TopAppBar) agar bagian bottom mentok 0.dp
-                .padding(
-                    top = paddingValues.calculateTopPadding(),
-                    bottom = 0.dp 
-                )
+                .padding(top = paddingValues.calculateTopPadding(), bottom = 0.dp)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp) 
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
+
+            // ── SECTION: Display & Styling ──────────────────────────────────
             SettingsHeader(title = "Display & Styling")
 
-            Text(
-                text = "Dynamic Color Palette Scheme",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(vertical = 8.dp)
+            // Toggle dark/light mode
+            ListItem(
+                headlineContent = { Text("Theme Mode") },
+                supportingContent = {
+                    Text(if (isDarkTheme) "Dark mode aktif" else "Light mode aktif")
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = if (isDarkTheme) Icons.Filled.DarkMode else Icons.Filled.LightMode,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = isDarkTheme,
+                        onCheckedChange = { viewModel.settingsManager.setDarkTheme(it) }
+                    )
+                }
             )
 
-            LazyRow(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(ThemeSeedColors) { seedColor ->
-                    val isSelected = liveColorVal == seedColor.value.toInt()
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(seedColor)
-                            .border(
-                                width = if (isSelected) 3.dp else 0.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.onBackground else Color.Transparent,
-                                shape = CircleShape
-                            )
-                            .clickable {
-                                viewModel.settingsManager.setThemeColor(seedColor.value.toInt())
-                                Toast.makeText(context, "Theme updated!", Toast.LENGTH_SHORT).show()
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isSelected) {
-                            Icon(Icons.Default.Check, contentDescription = "Selected", tint = Color.White)
-                        }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+
+            // Toggle Material You — hanya muncul di Android 12+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                ListItem(
+                    headlineContent = { Text("Material You (Dynamic Color)") },
+                    supportingContent = {
+                        Text(
+                            if (isDynamicColor)
+                                "Warna diambil dari wallpaper kamu secara otomatis"
+                            else
+                                "Matikan untuk memilih warna seed manual"
+                        )
+                    },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Filled.Palette,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    trailingContent = {
+                        Switch(
+                            checked = isDynamicColor,
+                            onCheckedChange = { viewModel.settingsManager.setDynamicColor(it) }
+                        )
                     }
-                }
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
             }
 
+            // Pilih warna seed — hanya aktif kalau Material You off
+            ListItem(
+                headlineContent = {
+                    Text(
+                        "Accent Color",
+                        color = if (isDynamicColor)
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        else
+                            MaterialTheme.colorScheme.onSurface
+                    )
+                },
+                supportingContent = {
+                    // Tampilkan nama warna yang dipilih sekarang
+                    val currentName = ThemeSeedColors
+                        .find { it.color.value.toInt() == liveColorVal }?.name
+                        ?: "Custom"
+                    Text(
+                        text = if (isDynamicColor) "Dinonaktifkan saat Material You aktif"
+                               else "Warna sekarang: $currentName",
+                        color = if (isDynamicColor)
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                leadingContent = {
+                    // Preview bulat warna sekarang
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color(liveColorVal))
+                    )
+                },
+                trailingContent = {
+                    TextButton(
+                        onClick = { if (!isDynamicColor) showColorDialog = true },
+                        enabled = !isDynamicColor
+                    ) {
+                        Text("Pilih")
+                    }
+                }
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
+
+            // ── SECTION: Manga Sources ──────────────────────────────────────
             SettingsHeader(title = "Manga Sources")
 
             ListItem(
                 headlineContent = { Text("KomikCast Indonesian Provider") },
                 supportingContent = { Text("Fetch popular manga and search from KomikCast") },
                 trailingContent = {
-                    Switch(checked = kcEnabled, onCheckedChange = { viewModel.settingsManager.setKomikCastEnabled(it) })
+                    Switch(
+                        checked = kcEnabled,
+                        onCheckedChange = { viewModel.settingsManager.setKomikCastEnabled(it) }
+                    )
                 }
             )
 
@@ -126,16 +204,26 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
                 headlineContent = { Text("Shinigami Indonesian Provider") },
                 supportingContent = { Text("Fetch popular manga and search from Shinigami API") },
                 trailingContent = {
-                    Switch(checked = sgEnabled, onCheckedChange = { viewModel.settingsManager.setShinigamiEnabled(it) })
+                    Switch(
+                        checked = sgEnabled,
+                        onCheckedChange = { viewModel.settingsManager.setShinigamiEnabled(it) }
+                    )
                 }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            // ── SECTION: Reader ─────────────────────────────────────────────
             SettingsHeader(title = "Reader Settings")
 
             ListItem(
                 headlineContent = { Text("Reading Orientation direction") },
-                supportingContent = { Text(if (readerMode == "vertical") "Vertical Webtoon continuous" else "Horizontal single page flip") },
+                supportingContent = {
+                    Text(
+                        if (readerMode == "vertical") "Vertical Webtoon continuous"
+                        else "Horizontal single page flip"
+                    )
+                },
                 trailingContent = {
                     Row {
                         FilterChip(
@@ -157,11 +245,16 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
                 headlineContent = { Text("Tap to zoom page scale gesture") },
                 supportingContent = { Text("Allows double pinch/pan zooming inside manga pages") },
                 trailingContent = {
-                    Switch(checked = tapToZoom, onCheckedChange = { viewModel.settingsManager.setTapToZoom(it) })
+                    Switch(
+                        checked = tapToZoom,
+                        onCheckedChange = { viewModel.settingsManager.setTapToZoom(it) }
+                    )
                 }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            // ── SECTION: Cache ──────────────────────────────────────────────
             SettingsHeader(title = "Manga Store Cache")
 
             val cacheMbFormat = remember(cacheBytes) {
@@ -177,11 +270,157 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
                             viewModel.settingsManager.clearCache()
                             Toast.makeText(context, "Manga cached pages cleared!", Toast.LENGTH_SHORT).show()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
                     ) {
                         Text("Clear Cache", color = Color.White)
                     }
                 }
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+
+    // ── DIALOG POPUP PILIH WARNA ────────────────────────────────────────────
+    if (showColorDialog) {
+        ColorPickerDialog(
+            currentColorVal = liveColorVal,
+            onColorSelected = { colorEntry ->
+                viewModel.settingsManager.setThemeColor(colorEntry.color.value.toInt())
+                Toast.makeText(context, "Tema '${colorEntry.name}' diterapkan!", Toast.LENGTH_SHORT).show()
+                showColorDialog = false
+            },
+            onDismiss = { showColorDialog = false }
+        )
+    }
+}
+
+@Composable
+fun ColorPickerDialog(
+    currentColorVal: Int,
+    onColorSelected: (ThemeSeedEntry) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    text = "Pilih Accent Color",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    text = "Pilih warna yang akan digunakan sebagai tema aplikasi",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 20.dp)
+                )
+
+                // Grid 2 kolom
+                val rows = ThemeSeedColors.chunked(2)
+                rows.forEach { rowItems ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        rowItems.forEach { entry ->
+                            val isSelected = entry.color.value.toInt() == currentColorVal
+                            ColorOptionCard(
+                                entry = entry,
+                                isSelected = isSelected,
+                                modifier = Modifier.weight(1f),
+                                onClick = { onColorSelected(entry) }
+                            )
+                        }
+                        // Isi sisa kalau ganjil
+                        if (rowItems.size == 1) Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("Batal")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ColorOptionCard(
+    entry: ThemeSeedEntry,
+    isSelected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        border = if (isSelected)
+            CardDefaults.outlinedCardBorder().copy(
+                width = 2.dp
+            )
+        else null,
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Bulat warna
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(entry.color)
+                    .border(
+                        width = 2.dp,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary
+                                else Color.Transparent,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            Text(
+                text = entry.name,
+                fontSize = 13.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected)
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
