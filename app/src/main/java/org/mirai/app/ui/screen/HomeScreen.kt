@@ -66,7 +66,7 @@ fun HomeScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
-                placeholder = { Text("Search manga...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
+                placeholder = { Text("Cari komik...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
@@ -113,14 +113,6 @@ fun HomeScreen(
                     expanded = showQuickMenu,
                     onDismissRequest = { showQuickMenu = false }
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("Settings") },
-                        leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                        onClick = {
-                            showQuickMenu = false
-                            onNavigateToSettings()
-                        }
-                    )
                     DropdownMenuItem(
                         text = { Text("Refresh Feed") },
                         leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
@@ -183,12 +175,12 @@ fun HomeScreen(
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
-                                    text = "All sources disabled in settings",
+                                    text = "Semua provider dinonaktifkan di pengaturan",
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.outline
                                 )
                                 TextButton(onClick = onNavigateToSettings) {
-                                    Text("Open Settings")
+                                    Text("Buka Pengaturan")
                                 }
                             }
                         }

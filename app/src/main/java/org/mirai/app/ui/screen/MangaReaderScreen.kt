@@ -11,6 +11,8 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -165,21 +167,23 @@ fun MangaReaderScreen(
                             }
                         }
                     } else {
-                        LazyRow(
+                        val pagerState = rememberPagerState(pageCount = { imageUrls.size })
+
+                        LaunchedEffect(chapterId) {
+                            pagerState.scrollToPage(0)
+                        }
+
+                        HorizontalPager(
+                            state = pagerState,
                             modifier = Modifier.fillMaxSize().then(scaleModifier),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                             userScrollEnabled = zoomScale == 1f
-                        ) {
-                            items(imageUrls) { imageUrl ->
-                                MangaPageImage(
-                                    imageUrl = imageUrl,
-                                    context = context,
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .wrapContentWidth(),
-                                    contentScale = ContentScale.FillHeight
-                                )
-                            }
+                        ) { page ->
+                            MangaPageImage(
+                                imageUrl = imageUrls[page],
+                                context = context,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit
+                            )
                         }
                     }
                 }

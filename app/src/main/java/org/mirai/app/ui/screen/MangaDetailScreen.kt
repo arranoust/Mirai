@@ -55,16 +55,15 @@ fun MangaDetailScreen(
     }
     isMangaSaved = currentSavedItem != null
 
-    // Observe hasil aksi save/remove dari ViewModel, lalu tampilkan Toast
     val libraryAction by viewModel.libraryActionResult.collectAsStateWithLifecycle()
     LaunchedEffect(libraryAction) {
         when (libraryAction) {
             is MangaViewModel.LibraryAction.Saved -> {
-                Toast.makeText(context, "Saved to Library!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Disimpan ke pustaka!", Toast.LENGTH_SHORT).show()
                 viewModel.onLibraryActionHandled()
             }
             is MangaViewModel.LibraryAction.Removed -> {
-                Toast.makeText(context, "Removed from library", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Dihapus dari pustaka!", Toast.LENGTH_SHORT).show()
                 viewModel.onLibraryActionHandled()
             }
             is MangaViewModel.LibraryAction.Error -> {
@@ -175,7 +174,7 @@ fun MangaDetailScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Source: $source",
+                                text = "Sumber: $source",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -213,7 +212,7 @@ fun MangaDetailScreen(
                     if (!manga.description.isNullOrBlank()) {
                         var isExpanded by remember { mutableStateOf(false) }
                         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                            Text(text = "Synopsis", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(text = "Sinopsis", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = manga.description!!,
@@ -242,7 +241,7 @@ fun MangaDetailScreen(
                                 Icon(Icons.Default.History, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Column {
-                                    Text("Resume Reading", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                    Text("Lanjut Membaca", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                     Text(currentSavedItem.lastReadChapterName!!, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                                 }
                             }
@@ -265,7 +264,7 @@ fun MangaDetailScreen(
                             modifier = Modifier.fillMaxWidth().height(100.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("No chapters available.", color = MaterialTheme.colorScheme.outline)
+                            Text("Tidak ada chapter yang tersedia.", color = MaterialTheme.colorScheme.outline)
                         }
                     }
                 } else {

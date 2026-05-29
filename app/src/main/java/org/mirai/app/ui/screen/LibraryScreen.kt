@@ -44,14 +44,14 @@ fun LibraryScreen(viewModel: MangaViewModel, navController: NavController) {
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Your library is empty",
+                        text = "Pustaka masih kosong",
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Bookmark or save mangas from the Home page list to read them offline and track progress.",
+                        text = "Simpan komik untuk menampilkannya disini.",
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center

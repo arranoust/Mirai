@@ -60,22 +60,15 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
     val tapToZoom     by viewModel.settingsManager.tapToZoom.collectAsStateWithLifecycle()
     val cacheBytes    by viewModel.settingsManager.cacheBytesUsed.collectAsStateWithLifecycle()
 
-    // State untuk dialog popup pilih warna
     var showColorDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        topBar = {
-            TopAppBar(
-                windowInsets = WindowInsets(0, 0, 0, 0),
-                title = { Text("Settings", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        }
+        TopAppBar(
+            windowInsets = WindowInsets(0, 0, 0, 0), 
+            title = { Text("Settings", fontWeight = FontWeight.Bold) },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+        )
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -85,14 +78,13 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
 
-            // ── SECTION: Display & Styling ──────────────────────────────────
-            SettingsHeader(title = "Display & Styling")
+            // ── SECTION: Display ──────────────────────────────────
+            SettingsHeader(title = "Tampilan")
 
-            // Toggle dark/light mode
             ListItem(
-                headlineContent = { Text("Theme Mode") },
+                headlineContent = { Text("Mode Gelap") },
                 supportingContent = {
-                    Text(if (isDarkTheme) "Dark mode aktif" else "Light mode aktif")
+                    Text(if (isDarkTheme) "Mode gelap aktif" else "Mode gelap nonaktif")
                 },
                 leadingContent = {
                     Icon(
@@ -111,7 +103,6 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
 
-            // Toggle Material You — hanya muncul di Android 12+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 ListItem(
                     headlineContent = { Text("Material You (Dynamic Color)") },
@@ -140,11 +131,10 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
             }
 
-            // Pilih warna seed — hanya aktif kalau Material You off
             ListItem(
                 headlineContent = {
                     Text(
-                        "Accent Color",
+                        "Warna Aksen",
                         color = if (isDynamicColor)
                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                         else
@@ -152,7 +142,6 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
                     )
                 },
                 supportingContent = {
-                    // Tampilkan nama warna yang dipilih sekarang
                     val currentName = ThemeSeedColors
                         .find { it.color.value.toInt() == liveColorVal }?.name
                         ?: "Custom"
@@ -166,7 +155,6 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
                     )
                 },
                 leadingContent = {
-                    // Preview bulat warna sekarang
                     Box(
                         modifier = Modifier
                             .size(36.dp)
@@ -187,11 +175,11 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             // ── SECTION: Manga Sources ──────────────────────────────────────
-            SettingsHeader(title = "Manga Sources")
+            SettingsHeader(title = "Provider Manga")
 
             ListItem(
-                headlineContent = { Text("KomikCast Indonesian Provider") },
-                supportingContent = { Text("Fetch popular manga and search from KomikCast") },
+                headlineContent = { Text("KomikCast") },
+                supportingContent = { Text("Tampilkan komik dari KomikCast") },
                 trailingContent = {
                     Switch(
                         checked = kcEnabled,
@@ -201,8 +189,8 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
             )
 
             ListItem(
-                headlineContent = { Text("Shinigami Indonesian Provider") },
-                supportingContent = { Text("Fetch popular manga and search from Shinigami API") },
+                headlineContent = { Text("Shinigami") },
+                supportingContent = { Text("Tampilkan komik dari Shinigami") },
                 trailingContent = {
                     Switch(
                         checked = sgEnabled,
@@ -214,16 +202,10 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             // ── SECTION: Reader ─────────────────────────────────────────────
-            SettingsHeader(title = "Reader Settings")
+            SettingsHeader(title = "Pengaturan Pembaca")
 
             ListItem(
-                headlineContent = { Text("Reading Orientation direction") },
-                supportingContent = {
-                    Text(
-                        if (readerMode == "vertical") "Vertical Webtoon continuous"
-                        else "Horizontal single page flip"
-                    )
-                },
+                headlineContent = { Text("Mode Baca") },
                 trailingContent = {
                     Row {
                         FilterChip(
@@ -242,8 +224,7 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
             )
 
             ListItem(
-                headlineContent = { Text("Tap to zoom page scale gesture") },
-                supportingContent = { Text("Allows double pinch/pan zooming inside manga pages") },
+                headlineContent = { Text("Double tap untuk zoom") },
                 trailingContent = {
                     Switch(
                         checked = tapToZoom,
@@ -255,26 +236,26 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             // ── SECTION: Cache ──────────────────────────────────────────────
-            SettingsHeader(title = "Manga Store Cache")
+            SettingsHeader(title = "Cache")
 
             val cacheMbFormat = remember(cacheBytes) {
                 String.format("%.2f MB", cacheBytes.toDouble() / (1024 * 1024))
             }
 
             ListItem(
-                headlineContent = { Text("Manga Image Cache") },
+                headlineContent = { Text("Cache Gambar") },
                 supportingContent = { Text("Temporary files used: $cacheMbFormat") },
                 trailingContent = {
                     Button(
                         onClick = {
                             viewModel.settingsManager.clearCache()
-                            Toast.makeText(context, "Manga cached pages cleared!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Cache dibersihkan!!", Toast.LENGTH_SHORT).show()
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error
                         )
                     ) {
-                        Text("Clear Cache", color = Color.White)
+                        Text("Hapus Cache", color = Color.White)
                     }
                 }
             )
@@ -313,7 +294,7 @@ fun ColorPickerDialog(
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    text = "Pilih Accent Color",
+                    text = "Pilih Warna Aksen",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -343,7 +324,6 @@ fun ColorPickerDialog(
                                 onClick = { onColorSelected(entry) }
                             )
                         }
-                        // Isi sisa kalau ganjil
                         if (rowItems.size == 1) Spacer(modifier = Modifier.weight(1f))
                     }
                 }
@@ -390,7 +370,6 @@ fun ColorOptionCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Bulat warna
             Box(
                 modifier = Modifier
                     .size(36.dp)

@@ -38,8 +38,8 @@ class MainActivity : ComponentActivity() {
 
             MyApplicationTheme(
                 seedColorVal = themeColor,
-                darkTheme = isDarkTheme,        // <-- sekarang bisa diubah
-                dynamicColor = isDynamicColor   // <-- Material You toggle
+                darkTheme = isDarkTheme,       
+                dynamicColor = isDynamicColor  
             ) {
                 val navController = rememberNavController()
                 val currentBackStackEntry by navController.currentBackStackEntryAsState()
@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
                                             contentDescription = "Home"
                                         )
                                     },
-                                    label = { Text("Home") }
+                                    label = { Text("Beranda") }
                                 )
 
                                 NavigationBarItem(
@@ -86,7 +86,7 @@ class MainActivity : ComponentActivity() {
                                             contentDescription = "Library"
                                         )
                                     },
-                                    label = { Text("Library") }
+                                    label = { Text("Pustaka") }
                                 )
 
                                 NavigationBarItem(
@@ -106,7 +106,7 @@ class MainActivity : ComponentActivity() {
                                             contentDescription = "Settings"
                                         )
                                     },
-                                    label = { Text("Settings") }
+                                    label = { Text("Pengaturan") }
                                 )
                             }
                         }
