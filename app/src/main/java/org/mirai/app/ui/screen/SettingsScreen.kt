@@ -2,18 +2,15 @@ package org.mirai.app.ui.screen
 
 import android.os.Build
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
@@ -32,7 +29,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.mirai.app.ui.viewmodel.MangaViewModel
 
-// Daftar warna seed yang bisa dipilih, tiap entry punya nama & warna
 data class ThemeSeedEntry(val name: String, val color: Color)
 
 val ThemeSeedColors = listOf(
@@ -51,24 +47,26 @@ val ThemeSeedColors = listOf(
 fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
     val context = LocalContext.current
 
-    val liveColorVal  by viewModel.settingsManager.themeColor.collectAsStateWithLifecycle()
+    val liveColorVal   by viewModel.settingsManager.themeColor.collectAsStateWithLifecycle()
     val isDynamicColor by viewModel.settingsManager.isDynamicColor.collectAsStateWithLifecycle()
-    val isDarkTheme   by viewModel.settingsManager.isDarkTheme.collectAsStateWithLifecycle()
-    val kcEnabled     by viewModel.settingsManager.komikCastEnabled.collectAsStateWithLifecycle()
-    val sgEnabled     by viewModel.settingsManager.shinigamiEnabled.collectAsStateWithLifecycle()
-    val readerMode    by viewModel.settingsManager.readerMode.collectAsStateWithLifecycle()
-    val tapToZoom     by viewModel.settingsManager.tapToZoom.collectAsStateWithLifecycle()
-    val cacheBytes    by viewModel.settingsManager.cacheBytesUsed.collectAsStateWithLifecycle()
+    val isDarkTheme    by viewModel.settingsManager.isDarkTheme.collectAsStateWithLifecycle()
+    val kcEnabled      by viewModel.settingsManager.komikCastEnabled.collectAsStateWithLifecycle()
+    val sgEnabled      by viewModel.settingsManager.shinigamiEnabled.collectAsStateWithLifecycle()
+    val readerMode     by viewModel.settingsManager.readerMode.collectAsStateWithLifecycle()
+    val tapToZoom      by viewModel.settingsManager.tapToZoom.collectAsStateWithLifecycle()
+    val cacheBytes     by viewModel.settingsManager.cacheBytesUsed.collectAsStateWithLifecycle()
 
     var showColorDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        TopAppBar(
-            windowInsets = WindowInsets(0, 0, 0, 0), 
-            title = { Text("Settings", fontWeight = FontWeight.Bold) },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-        )
+        topBar = {
+            TopAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0),
+                title = { Text("Settings", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -244,12 +242,12 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
 
             ListItem(
                 headlineContent = { Text("Cache Gambar") },
-                supportingContent = { Text("Temporary files used: $cacheMbFormat") },
+                supportingContent = { Text("File sementara terpakai: $cacheMbFormat") },
                 trailingContent = {
                     Button(
                         onClick = {
                             viewModel.settingsManager.clearCache()
-                            Toast.makeText(context, "Cache dibersihkan!!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Cache dibersihkan!", Toast.LENGTH_SHORT).show()
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error
@@ -264,7 +262,6 @@ fun SettingsScreen(viewModel: MangaViewModel, onNavigateBack: () -> Unit) {
         }
     }
 
-    // ── DIALOG POPUP PILIH WARNA ────────────────────────────────────────────
     if (showColorDialog) {
         ColorPickerDialog(
             currentColorVal = liveColorVal,
@@ -306,7 +303,6 @@ fun ColorPickerDialog(
                     modifier = Modifier.padding(bottom = 20.dp)
                 )
 
-                // Grid 2 kolom
                 val rows = ThemeSeedColors.chunked(2)
                 rows.forEach { rowItems ->
                     Row(
@@ -351,11 +347,7 @@ fun ColorOptionCard(
         onClick = onClick,
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        border = if (isSelected)
-            CardDefaults.outlinedCardBorder().copy(
-                width = 2.dp
-            )
-        else null,
+        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected)
                 MaterialTheme.colorScheme.primaryContainer
