@@ -1,5 +1,6 @@
 package org.mirai.app.ui.screen
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,20 +16,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import android.widget.Toast
 import org.mirai.app.data.model.Manga
 import org.mirai.app.ui.viewmodel.MangaViewModel
 import org.mirai.app.ui.viewmodel.UiState
@@ -43,14 +38,23 @@ fun HomeScreen(
     val context = LocalContext.current
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchState by viewModel.searchResult.collectAsStateWithLifecycle()
-
     val kcLatest by viewModel.komikCastLatest.collectAsStateWithLifecycle()
     val sgLatest by viewModel.shinigamiLatest.collectAsStateWithLifecycle()
-
     val kcEnabled by viewModel.settingsManager.komikCastEnabled.collectAsStateWithLifecycle()
     val sgEnabled by viewModel.settingsManager.shinigamiEnabled.collectAsStateWithLifecycle()
 
     var showQuickMenu by remember { mutableStateOf(false) }
+
+    // Callback distabilkan dengan remember agar tidak trigger rekomposisi child
+    val onQueryChange = remember(viewModel) { { q: String -> viewModel.onSearchQueryChanged(q) } }
+    val onClearQuery = remember(viewModel) { { viewModel.onSearchQueryChanged("") } }
+    val onRefresh = remember(viewModel, context) {
+        {
+            showQuickMenu = false
+            viewModel.loadHomeData()
+            Toast.makeText(context, "Refreshing feed...", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -65,8 +69,13 @@ fun HomeScreen(
         ) {
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = { viewModel.onSearchQueryChanged(it) },
-                placeholder = { Text("Cari komik...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
+                onValueChange = onQueryChange,
+                placeholder = {
+                    Text(
+                        "Cari komik...",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
@@ -76,8 +85,8 @@ fun HomeScreen(
                 },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = "Clear search")
+                        IconButton(onClick = onClearQuery) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear search")
                         }
                     }
                 },
@@ -108,7 +117,6 @@ fun HomeScreen(
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
-
                 DropdownMenu(
                     expanded = showQuickMenu,
                     onDismissRequest = { showQuickMenu = false }
@@ -116,76 +124,97 @@ fun HomeScreen(
                     DropdownMenuItem(
                         text = { Text("Refresh Feed") },
                         leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
-                        onClick = {
-                            showQuickMenu = false
-                            viewModel.loadHomeData()
-                            Toast.makeText(context, "Refreshing feed...", Toast.LENGTH_SHORT).show()
-                        }
+                        onClick = onRefresh
                     )
                 }
             }
         }
 
         if (searchQuery.isNotBlank()) {
-            ActiveSearchResults(
-                searchState = searchState,
-                navController = navController
-            )
+            ActiveSearchResults(searchState = searchState, navController = navController)
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 0.dp)
-            ) {
-                if (kcEnabled) {
-                    item {
-                        SourceLaneHeader(
-                        title = "KomikCast",
-                        onClick = { navController.navigate("browse/KomikCast") }
-                        )
-                        SourceMangaLane(sourceState = kcLatest, navController = navController)
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-                }
+            HomeFeed(
+                kcEnabled = kcEnabled,
+                sgEnabled = sgEnabled,
+                kcLatest = kcLatest,
+                sgLatest = sgLatest,
+                navController = navController,
+                onNavigateToSettings = onNavigateToSettings
+            )
+        }
+    }
+}
 
-                if (sgEnabled) {
-                    item {
-                        SourceLaneHeader(
-                        title = "Shinigami",
-                        onClick = { navController.navigate("browse/Shinigami") }
-                        )
-                        SourceMangaLane(sourceState = sgLatest, navController = navController)
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-                }
+// Dipisah jadi fungsi sendiri agar HomeScreen tidak rekomposisi penuh
+// saat hanya kcLatest / sgLatest yang berubah
+@Composable
+private fun HomeFeed(
+    kcEnabled: Boolean,
+    sgEnabled: Boolean,
+    kcLatest: UiState<List<Manga>>,
+    sgLatest: UiState<List<Manga>>,
+    navController: NavController,
+    onNavigateToSettings: () -> Unit
+) {
+    if (!kcEnabled && !sgEnabled) {
+        EmptyProviderState(onNavigateToSettings = onNavigateToSettings)
+        return
+    }
 
-                if (!kcEnabled && !sgEnabled) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(300.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = Icons.Outlined.LayersClear,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(64.dp),
-                                    tint = MaterialTheme.colorScheme.outline
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = "Semua provider dinonaktifkan di pengaturan",
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.outline
-                                )
-                                TextButton(onClick = onNavigateToSettings) {
-                                    Text("Buka Pengaturan")
-                                }
-                            }
-                        }
-                    }
-                }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 0.dp)
+    ) {
+        if (kcEnabled) {
+            item(key = "kc_header") {
+                SourceLaneHeader(
+                    title = "KomikCast",
+                    onClick = { navController.navigate("browse/KomikCast") }
+                )
+            }
+            item(key = "kc_lane") {
+                SourceMangaLane(sourceState = kcLatest, navController = navController)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+        if (sgEnabled) {
+            item(key = "sg_header") {
+                SourceLaneHeader(
+                    title = "Shinigami",
+                    onClick = { navController.navigate("browse/Shinigami") }
+                )
+            }
+            item(key = "sg_lane") {
+                SourceMangaLane(sourceState = sgLatest, navController = navController)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyProviderState(onNavigateToSettings: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = Icons.Outlined.LayersClear,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.outline
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Semua provider dinonaktifkan di pengaturan",
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.outline
+            )
+            TextButton(onClick = onNavigateToSettings) {
+                Text("Buka Pengaturan")
             }
         }
     }
@@ -229,7 +258,9 @@ fun SourceMangaLane(sourceState: UiState<List<Manga>>, navController: NavControl
     when (sourceState) {
         is UiState.Loading -> {
             Box(
-                modifier = Modifier.fillMaxWidth().height(200.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(strokeWidth = 3.dp)
@@ -237,7 +268,10 @@ fun SourceMangaLane(sourceState: UiState<List<Manga>>, navController: NavControl
         }
         is UiState.Error -> {
             Box(
-                modifier = Modifier.fillMaxWidth().height(200.dp).padding(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -253,6 +287,7 @@ fun SourceMangaLane(sourceState: UiState<List<Manga>>, navController: NavControl
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // key stabil mencegah item di-recompose saat list tidak berubah
                 items(sourceState.data, key = { it.id }) { manga ->
                     MangaGridCard(manga = manga, navController = navController)
                 }
@@ -263,33 +298,56 @@ fun SourceMangaLane(sourceState: UiState<List<Manga>>, navController: NavControl
 }
 
 @Composable
-fun VerticalMangaGrid(mangas: List<Manga>, navController: NavController, modifier: Modifier = Modifier) {
-    GridCellsAdaptive(items = mangas, columns = 3, modifier = modifier.padding(bottom = 0.dp)) { manga ->
-        MangaGridCard(manga = manga, navController = navController, modifier = Modifier.padding(4.dp))
+fun VerticalMangaGrid(
+    mangas: List<Manga>,
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
+    GridCellsAdaptive(
+        items = mangas,
+        columns = 3,
+        modifier = modifier.padding(bottom = 0.dp)
+    ) { manga ->
+        MangaGridCard(
+            manga = manga,
+            navController = navController,
+            modifier = Modifier.padding(4.dp)
+        )
     }
 }
 
 @Composable
-fun <T> GridCellsAdaptive(items: List<T>, columns: Int, modifier: Modifier = Modifier, content: @Composable (T) -> Unit) {
+fun <T> GridCellsAdaptive(
+    items: List<T>,
+    columns: Int,
+    modifier: Modifier = Modifier,
+    content: @Composable (T) -> Unit
+) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
     ) {
         val rows = items.chunked(columns)
-        items(rows) { rowItems ->
+        // key = index row agar scroll position tidak reset saat list update parsial
+        items(rows, key = { rows.indexOf(it) }) { rowItems ->
             Row(modifier = Modifier.fillMaxWidth()) {
                 rowItems.forEach { item ->
                     Box(modifier = Modifier.weight(1f)) { content(item) }
                 }
                 val remainder = columns - rowItems.size
-                if (remainder > 0) repeat(remainder) { Spacer(modifier = Modifier.weight(1f)) }
+                if (remainder > 0) repeat(remainder) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             }
         }
     }
 }
 
 @Composable
-fun ActiveSearchResults(searchState: UiState<List<Manga>>, navController: NavController) {
+fun ActiveSearchResults(
+    searchState: UiState<List<Manga>>,
+    navController: NavController
+) {
     when (searchState) {
         is UiState.Loading -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -298,13 +356,15 @@ fun ActiveSearchResults(searchState: UiState<List<Manga>>, navController: NavCon
         }
         is UiState.Error -> {
             Box(
-                modifier = Modifier.fillMaxSize().padding(32.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
                         imageVector = Icons.Default.Info,
-                        contentDescription = "Error icon",
+                        contentDescription = null,
                         modifier = Modifier.size(48.dp),
                         tint = MaterialTheme.colorScheme.outline
                     )
